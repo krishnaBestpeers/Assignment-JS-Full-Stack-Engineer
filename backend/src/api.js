@@ -28,12 +28,6 @@ app.use(require('cors')());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-const updateIndexes = async (collection) => {
-  const todos = await collection.find({}).toArray();
-  for (let i = 0; i < todos.length; i++) {
-    await collection.updateOne({ _id: todos[i]._id }, { $set: { index: i + 1 } });
-  }
-};
 
 app.get('/', async (req, res) => {
   try {
@@ -60,24 +54,30 @@ app.get('/', async (req, res) => {
 });
 
 app.post('/', async (req, res) => {
-  const { text, dueDate } = req.body;
+  try {
+    const { text, dueDate } = req.body;
 
-  if (typeof text !== 'string') {
-    res.status(400);
-    res.json({ message: "invalid 'text' expected string" });
-    return;
+    if (typeof text !== 'string') {
+      res.status(400);
+      res.json({ message: "invalid 'text' expected string" });
+      return;
+    }
+    const collection = database.client.db('todos').collection('todos');
+    const maxIndexTodo = await collection
+      .find({}, { sort: { index: -1 }, limit: 1 })
+      .toArray();
+
+    const newIndex = maxIndexTodo.length > 0 ? maxIndexTodo[0].index + 1 : 1;
+
+    const todo = { id: generateId(), text, completed: false, dueDate, index: newIndex };
+    await collection.insertOne(todo);
+    res.status(201);
+    res.json(todo);
+  } catch (error) {
+    console.error('Error handling POST request:', error);
+    res.status(500);
+    res.json({ message: 'Internal server error' });
   }
-  const collection = database.client.db('todos').collection('todos');
-  const maxIndexTodo = await collection
-    .find({}, { sort: { index: -1 }, limit: 1 })
-    .toArray();
-
-  const newIndex = maxIndexTodo.length > 0 ? maxIndexTodo[0].index + 1 : 1;
-
-  const todo = { id: generateId(), text, completed: false, dueDate, index: newIndex };
-  await collection.insertOne(todo);
-  res.status(201);
-  res.json(todo);
 });
 
 app.put('/drag', async (req, res) => {
@@ -88,8 +88,7 @@ app.put('/drag', async (req, res) => {
   try {
     // Remove the dragged todo from its current position
     await collection.updateOne({ id: draggedId }, { $set: { index: -1 } });
-    const todos = await collection.find({}).toArray();
-    console.log(todos, "todos 1")
+    await collection.find({}).toArray();
 
     // Shift other todos to make space for the dragged todo
     if (draggedIndex < droppedIndex) {
@@ -117,7 +116,6 @@ app.put('/drag', async (req, res) => {
 app.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { completed } = req.body;
-  console.log("put id");
   if (typeof completed !== 'boolean') {
     res.status(400);
     res.json({ message: "invalid 'completed' expected boolean" });
@@ -125,7 +123,7 @@ app.put('/:id', async (req, res) => {
   }
 
   try {
-    let result = await database.client.db('todos').collection('todos').updateOne(
+    await database.client.db('todos').collection('todos').updateOne(
       { id },
       { $set: { completed: completed } },
     );
@@ -139,21 +137,27 @@ app.put('/:id', async (req, res) => {
 });
 
 app.delete('/:id', async (req, res) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-  const collection = database.client.db('todos').collection('todos');
+    const collection = database.client.db('todos').collection('todos');
 
-  // Find the todo to be deleted
-  const todoToDelete = await collection.findOne({ id: id });
-  if (!todoToDelete) {
-    res.status(404);
-    res.json({ message: "Todo not found" });
-    return;
+    // Find the todo to be deleted
+    const todoToDelete = await collection.findOne({ id: id });
+    if (!todoToDelete) {
+      res.status(404);
+      res.json({ message: "Todo not found" });
+      return;
+    }
+    await collection.deleteOne({ id: id });
+
+    res.status(203);
+    res.end();
+  } catch (error) {
+    console.error('Error handling DELETE request:', error);
+    res.status(500);
+    res.json({ message: 'Internal server error' });
   }
-  await collection.deleteOne({ id: id });
-
-  res.status(203);
-  res.end();
 });
 
 module.exports = app;

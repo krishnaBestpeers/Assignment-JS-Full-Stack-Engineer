@@ -50,7 +50,6 @@ function Todos() {
   const [skip, setSkip] = useState(0);
   const [draggedItemId, setDraggedItemId] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
-  const [index, setIndex] = useState(1);
 
   useEffect(() => {
     const loadInitialTodos = async () => {
@@ -95,11 +94,7 @@ function Todos() {
     fetch(apiUrl)
       .then((response) => response.json())
       .then((newTodos) => {
-        // if (skip === 0) {
-        //   setTodos(newTodos);
-        // } else {
         setTodos((prevTodos) => [...prevTodos, ...newTodos]);
-        // }
         if (newTodos.length < 20) {
           setHasMore(false);
         }
@@ -109,24 +104,6 @@ function Todos() {
         setLoading(false);
       });
   };
-
-  // useEffect(() => {
-  //   let apiUrl = "http://localhost:3001";
-  //   if (showDueToday) {
-  //     const today = new Date().toISOString().split("T")[0];
-  //     apiUrl += `/?dueDate=${today}`;
-
-  //     fetch(apiUrl)
-  //       .then((response) => response.json())
-  //       .then((todos) => setTodos(todos));
-  //   }
-  // }, [showDueToday]);
-
-  // useEffect(() => {
-  //   fetch("http://localhost:3001/")
-  //     .then((response) => response.json())
-  //     .then((todos) => setTodos(todos));
-  // }, [setTodos]);
 
   function addTodo(text) {
     fetch("http://localhost:3001/", {
@@ -189,7 +166,6 @@ function Todos() {
 
   function drop(event, index, id) {
     event.preventDefault();
-    console.log(event, id, "111111 drop");
 
     fetch(`http://localhost:3001/drag`, {
       headers: {
@@ -233,7 +209,7 @@ function Todos() {
               fullWidth
               value={newTodoText}
               onKeyPress={(event) => {
-                if (event.key === "Enter") {
+                if (event.key === "Enter" && newTodoText.trim() !== "") {
                   addTodo(newTodoText);
                 }
               }}
@@ -251,7 +227,11 @@ function Todos() {
           <Button
             className={classes.addTodoButton}
             startIcon={<Icon>add</Icon>}
-            onClick={() => addTodo(newTodoText)}
+            onClick={() => {
+              if (newTodoText.trim() !== "") {
+                addTodo(newTodoText);
+              }
+            }}
           >
             Add
           </Button>
