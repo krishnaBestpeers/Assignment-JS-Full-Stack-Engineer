@@ -1,29 +1,26 @@
 import { useState, useEffect } from "react";
 import { Container, Typography, Button } from "@mui/material";
-import AddTodoForm from "./AddTodoForm";
-import TodoList from "./TodoList";
+import AddTodoForm from "./components/AddTodoForm";
+import TodoList from "./components/TodoList";
+import useApi from "./useApi";
 
 function Todos() {
   const [todos, setTodos] = useState([]);
   const [showDueToday, setShowDueToday] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [skip, setSkip] = useState(0);
   const [draggedItemId, setDraggedItemId] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
   const apiURL = "http://localhost:3001";
 
+  const { loading, error, fetchData } = useApi(apiURL);
+
   useEffect(() => {
     const loadInitialTodos = async () => {
       setSkip(0);
-      setLoading(true);
       setTodos([]); // Clear existing todos
-
-      try {
-        await loadTodos(0);
-      } finally {
-        setLoading(false);
-      }
+      await loadTodos(0);
     };
 
     loadInitialTodos();
@@ -41,59 +38,33 @@ function Todos() {
       loadTodos(skip + 20);
     }
   };
-  const loadTodos = (tempSkip) => {
+  const loadTodos = async (tempSkip) => {
     if (loading) return;
 
-    setLoading(true);
-
-    let apiUrl = `${apiURL}/?skip=${tempSkip}`;
+    let apiUrl = `/?skip=${tempSkip}`;
 
     if (showDueToday) {
       const today = new Date().toISOString().split("T")[0];
       apiUrl += `&dueDate=${today}`;
     }
-
-    fetch(apiUrl)
-      .then((response) => response.json())
-      .then((newTodos) => {
-        setTodos((prevTodos) => [...prevTodos, ...newTodos]);
-        if (newTodos.length < 20) {
-          setHasMore(false);
-        }
-        setLoading(false);
-      })
-      .catch((error) => {
-        setLoading(false);
-      });
+    const newTodos = await fetchData(apiUrl);
+    setTodos((prevTodos) => [...prevTodos, ...newTodos]);
+    if (newTodos.length < 20) {
+      setHasMore(false);
+    }
   };
 
   function addTodo(text, dueDate) {
-    fetch(`${apiURL}/`, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-      body: JSON.stringify({ text, dueDate }),
-    })
-      .then((response) => response.json())
-      .then((todo) => {
-        setTodos([...todos, todo]);
-        setShowDueToday(false);
-      });
+    const body = { text, dueDate };
+    fetchData("/", "POST", body).then((todo) => {
+      setTodos((prevTodos) => [...prevTodos, todo]);
+      setShowDueToday(false);
+    });
   }
 
   function toggleTodoCompleted(id) {
-    fetch(`${apiURL}/${id}`, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      method: "PUT",
-      body: JSON.stringify({
-        completed: !todos.find((todo) => todo.id === id).completed,
-      }),
-    }).then(() => {
+    const body = { completed: !todos.find((todo) => todo.id === id).completed };
+    fetchData(`/${id}`, "PUT", body).then(() => {
       const newTodos = [...todos];
       const modifiedTodoIndex = newTodos.findIndex((todo) => todo.id === id);
       newTodos[modifiedTodoIndex] = {
@@ -105,9 +76,9 @@ function Todos() {
   }
 
   function deleteTodo(id) {
-    fetch(`${apiURL}/${id}`, {
-      method: "DELETE",
-    }).then(() => setTodos(todos.filter((todo) => todo.id !== id)));
+    fetchData(`/${id}`, "DELETE").then(() =>
+      setTodos(todos.filter((todo) => todo.id !== id))
+    );
   }
   function handleShowDueToday() {
     setTodos([]);
@@ -128,25 +99,13 @@ function Todos() {
   function drop(event, index, id) {
     event.preventDefault();
 
-    fetch(`${apiURL}/drag`, {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      method: "PUT",
-      body: JSON.stringify({
-        draggedId: draggedItemId, // Provide the ID of the dragged item
-        draggedIndex: draggedIndex,
-        droppedIndex: index, // Provide the dropped index
-        droppedId: id,
-      }),
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
+    const body = {
+      draggedId: draggedItemId, // Provide the ID of the dragged item
+      draggedIndex: draggedIndex,
+      droppedIndex: index, // Provide the dropped index
+      droppedId: id,
+    };
+    fetchData("/drag", "PUT", body)
       .then((data) => {
         console.log("Success:", data);
         loadTodos(0);
