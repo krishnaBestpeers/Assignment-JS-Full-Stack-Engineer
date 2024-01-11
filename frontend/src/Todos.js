@@ -11,6 +11,7 @@ function Todos() {
   const [skip, setSkip] = useState(0);
   const [draggedItemId, setDraggedItemId] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const apiURL = 'http://localhost:3001';
 
   useEffect(() => {
     const loadInitialTodos = async () => {
@@ -45,7 +46,7 @@ function Todos() {
 
     setLoading(true);
 
-    let apiUrl = `http://localhost:3001/?skip=${tempSkip}`;
+    let apiUrl = `${apiURL}/?skip=${tempSkip}`;
 
     if (showDueToday) {
       const today = new Date().toISOString().split("T")[0];
@@ -67,7 +68,7 @@ function Todos() {
   };
 
   function addTodo(text, dueDate) {
-    fetch("http://localhost:3001/", {
+    fetch(`${apiURL}/`, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -83,7 +84,7 @@ function Todos() {
   }
 
   function toggleTodoCompleted(id) {
-    fetch(`http://localhost:3001/${id}`, {
+    fetch(`${apiURL}/${id}`, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -104,7 +105,7 @@ function Todos() {
   }
 
   function deleteTodo(id) {
-    fetch(`http://localhost:3001/${id}`, {
+    fetch(`${apiURL}/${id}`, {
       method: "DELETE",
     }).then(() => setTodos(todos.filter((todo) => todo.id !== id)));
   }
@@ -127,7 +128,7 @@ function Todos() {
   function drop(event, index, id) {
     event.preventDefault();
 
-    fetch(`http://localhost:3001/drag`, {
+    fetch(`${apiURL}/drag`, {
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
