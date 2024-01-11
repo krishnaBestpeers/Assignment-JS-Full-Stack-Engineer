@@ -1,49 +1,10 @@
 import { useState, useEffect } from "react";
-import makeStyles from "@mui/styles/makeStyles";
-import {
-  Container,
-  Typography,
-  Button,
-  Icon,
-  Paper,
-  Box,
-  TextField,
-  Checkbox,
-} from "@mui/material";
-
-const useStyles = makeStyles({
-  addTodoContainer: { padding: 10 },
-  addTodoButton: { marginLeft: 5 },
-  todosContainer: { marginTop: 10, padding: 10 },
-  todoContainer: {
-    borderTop: "1px solid #bfbfbf",
-    marginTop: 5,
-    "&:first-child": {
-      margin: 0,
-      borderTop: "none",
-    },
-    "&:hover": {
-      "& $deleteTodo": {
-        visibility: "visible",
-      },
-    },
-  },
-  todoTextCompleted: {
-    textDecoration: "line-through",
-  },
-  deleteTodo: {
-    visibility: "hidden",
-  },
-  dueDateInput: {
-    marginLeft: 10,
-  },
-});
+import { Container, Typography, Button } from "@mui/material";
+import AddTodoForm from "./AddTodoForm";
+import TodoList from "./TodoList";
 
 function Todos() {
-  const classes = useStyles();
   const [todos, setTodos] = useState([]);
-  const [newTodoText, setNewTodoText] = useState("");
-  const [dueDate, setDueDate] = useState("");
   const [showDueToday, setShowDueToday] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -105,7 +66,7 @@ function Todos() {
       });
   };
 
-  function addTodo(text) {
+  function addTodo(text, dueDate) {
     fetch("http://localhost:3001/", {
       headers: {
         Accept: "application/json",
@@ -115,10 +76,9 @@ function Todos() {
       body: JSON.stringify({ text, dueDate }),
     })
       .then((response) => response.json())
-      .then((todo) => setTodos([...todos, todo]))
-      .finally(() => {
-        setNewTodoText("");
-        setDueDate("");
+      .then((todo) => {
+        setTodos([...todos, todo]);
+        setShowDueToday(false);
       });
   }
 
@@ -202,41 +162,7 @@ function Todos() {
       <Typography variant="h3" component="h1" gutterBottom>
         Todos
       </Typography>
-      <Paper className={classes.addTodoContainer}>
-        <Box display="flex" flexDirection="row">
-          <Box flexGrow={1}>
-            <TextField
-              fullWidth
-              value={newTodoText}
-              onKeyPress={(event) => {
-                if (event.key === "Enter" && newTodoText.trim() !== "") {
-                  addTodo(newTodoText);
-                }
-              }}
-              onChange={(event) => setNewTodoText(event.target.value)}
-            />
-          </Box>
-          <Box>
-            <TextField
-              type="date"
-              className={classes.dueDateInput}
-              value={dueDate}
-              onChange={(event) => setDueDate(event.target.value)}
-            />
-          </Box>
-          <Button
-            className={classes.addTodoButton}
-            startIcon={<Icon>add</Icon>}
-            onClick={() => {
-              if (newTodoText.trim() !== "") {
-                addTodo(newTodoText);
-              }
-            }}
-          >
-            Add
-          </Button>
-        </Box>
-      </Paper>
+      <AddTodoForm addTodo={addTodo} />
       <Button
         variant={showDueToday ? "contained" : "outlined"}
         onClick={() => handleShowDueToday()}
@@ -244,58 +170,17 @@ function Todos() {
         Due Today
       </Button>
       {todos.length > 0 && (
-        <Paper className={classes.todosContainer}>
-          <Box display="flex" flexDirection="column" alignItems="stretch">
-            {todos.map(({ id, text, completed, dueDate, index }) => (
-              <div
-                key={id}
-                draggable
-                onDragStart={(e) => dragStart(e, index, id)}
-                onDragOver={(e) => dragOver(e)}
-                onDrop={(e) => drop(e, index, id)}
-              >
-                <Box
-                  key={id}
-                  display="flex"
-                  flexDirection="row"
-                  alignItems="center"
-                  className={classes.todoContainer}
-                >
-                  <Checkbox
-                    checked={completed}
-                    onChange={() => toggleTodoCompleted(id)}
-                  ></Checkbox>
-                  <Box flexGrow={1}>
-                    <Typography
-                      className={completed ? classes.todoTextCompleted : ""}
-                      variant="body1"
-                    >
-                      {text}
-                    </Typography>
-                    {dueDate && (
-                      <Typography variant="caption" color="textSecondary">
-                        Due Date: {dueDate}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Button
-                    className={classes.deleteTodo}
-                    startIcon={<Icon>delete</Icon>}
-                    onClick={() => deleteTodo(id)}
-                  >
-                    Delete
-                  </Button>
-                </Box>
-              </div>
-            ))}
-            {loading && <Typography>Loading...</Typography>}
-            {!loading && hasMore && (
-              <Button onClick={loadMore} fullWidth>
-                Load More
-              </Button>
-            )}
-          </Box>
-        </Paper>
+        <TodoList
+          todos={todos}
+          toggleTodoCompleted={toggleTodoCompleted}
+          deleteTodo={deleteTodo}
+          dragStart={dragStart}
+          dragOver={dragOver}
+          drop={drop}
+          loading={loading}
+          hasMore={hasMore}
+          loadMore={loadMore}
+        />
       )}
     </Container>
   );
