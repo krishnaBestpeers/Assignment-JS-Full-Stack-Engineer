@@ -11,7 +11,7 @@ function Todos() {
   const [skip, setSkip] = useState(0);
   const [draggedItemId, setDraggedItemId] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
-  const apiURL = 'http://localhost:3001';
+  const apiURL = "http://localhost:3001";
 
   useEffect(() => {
     const loadInitialTodos = async () => {
